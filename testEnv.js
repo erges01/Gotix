@@ -10,8 +10,8 @@ exports.createTicket = async (req, res) => {
       description,
       date,
       location,
-      organizer: req.user._id, // Assuming req.user contains authenticated user info
-      ticketTypes
+      createdBy: req.user._id,
+      ticketTypes,
     });
 
     res.status(201).json({
@@ -19,7 +19,41 @@ exports.createTicket = async (req, res) => {
       data: { ticket: newTicket },
     });
   } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Invalid ticket data provided',
+        errors: err.errors,
+      });
+    }
     res.status(500).json({ message: 'Failed to create ticket', error: err.message });
+  }
+};
+
+exports.getAllTickets = async (req, res) => {
+  try {
+    const { eventName, location, date, page = 1, limit = 10 } = req.query;
+
+    // Filters for search
+    const filters = {};
+    if (eventName) filters.eventName = { $regex: eventName, $options: 'i' };
+    if (location) filters.location = { $regex: location, $options: 'i' };
+    if (date) filters.date = date;
+
+    // Pagination
+    const skip = (page - 1) * limit;
+    const tickets = await Ticket.find(filters).skip(skip).limit(limit);
+
+    res.status(200).json({
+      status: 'success',
+      results: tickets.length,
+      data: { tickets },
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to retrieve tickets',
+      error: err.message,
+    });
   }
 };
 
@@ -27,12 +61,7 @@ exports.createTicket = async (req, res) => {
 exports.getTicketsByEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-
-    if (!eventId) {
-      return res.status(400).json({ message: 'Event ID is required' });
-    }
-
-    const tickets = await Ticket.find({ event: eventId });
+    const tickets = await Ticket.find({ event: eventId }).populate('createdBy', 'name email');
 
     res.status(200).json({
       status: 'success',
@@ -44,10 +73,11 @@ exports.getTicketsByEvent = async (req, res) => {
   }
 };
 
-// Get a single ticket by ID
+// Get a ticket by ID
 exports.getTicketById = async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id).populate('createdBy', 'name email');
+    const { ticketId } = req.params;
+    const ticket = await Ticket.findById(ticketId).populate('createdBy', 'name email');
 
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
@@ -58,7 +88,7 @@ exports.getTicketById = async (req, res) => {
       data: { ticket },
     });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to retrieve ticket', error: err.message });
+    res.status(500).json({ message: 'Failed to fetch ticket', error: err.message });
   }
 };
 
@@ -77,11 +107,6 @@ exports.updateTicket = async (req, res) => {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
-    // Optional: Ensure only the creator can update
-    if (updatedTicket.organizer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'You are not allowed to modify this ticket' });
-    }
-
     res.status(200).json({
       status: 'success',
       data: { ticket: updatedTicket },
@@ -96,38 +121,17 @@ exports.deleteTicket = async (req, res) => {
   try {
     const { ticketId } = req.params;
 
-    const ticket = await Ticket.findById(ticketId);
-    if (!ticket) {
+    const deletedTicket = await Ticket.findByIdAndDelete(ticketId);
+
+    if (!deletedTicket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
-    // Optional: Ensure only the creator can delete
-    if (ticket.organizer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'You are not allowed to delete this ticket' });
-    }
-
-    await Ticket.findByIdAndDelete(ticketId);
-
-    res.status(200).json({
+    res.status(204).json({
       status: 'success',
-      message: 'Ticket deleted successfully',
+      data: null,
     });
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete ticket', error: err.message });
-  }
-};
-
-// Get all tickets
-exports.getAllTickets = async (req, res) => {
-  try {
-    const tickets = await Ticket.find(req.query).populate('createdBy', 'name email');
-
-    res.status(200).json({
-      status: 'success',
-      results: tickets.length,
-      data: { tickets },
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to retrieve tickets', error: err.message });
   }
 };

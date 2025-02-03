@@ -1,42 +1,54 @@
-const bcrypt = require('bcryptjs'); // Add this line at the top
-const mongoose=require ('mongoose');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const validator = require('validator');
 
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'please enter your name']
+    required: [true, 'Please enter your name'],
   },
-  email:{
+  email: {
     type: String,
-    required: [true, 'please enter your email'],
-    unique:true,
-    lowercase:true,
-    validate:[validator.isEmail, 'please enter a valid email'],
+    required: [true, 'Please enter your email'],
+    unique: true,
+    lowercase: true,
+    validate: [validator.isEmail, 'Please enter a valid email'],
   },
-  password:{
-    type:String,
-    required:[true,'please enter a password'],
+  password: {
+    type: String,
+    required: [true, 'Please enter a password'],
     minlength: 7,
-    select: false
-    
-  }
+    select: false,
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
+  purchases: [
+    {
+      ticket: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Ticket',
+      },
+      ticketType: String,
+      quantity: Number,
+      purchasedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
 });
+
 userSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified or is new
   if (!this.isModified('password')) return next();
-  
-  // Hash the password with a salt round of 12
   this.password = await bcrypt.hash(this.password, 12);
-  
   next();
 });
-// Instance method to compare passwords
+
 userSchema.methods.comparePasswordInDb = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-
-const User =mongoose.model('User',userSchema);
-
-module.exports=User;
+module.exports = mongoose.model('User', userSchema);
