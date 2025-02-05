@@ -12,13 +12,14 @@ exports.createOrder = async (req, res) => {
     }
 
     const totalPrice = ticket.price * quantity;
+    const status = ticket.price === 0 ? "Confirmed" : "Pending";
 
     const newOrder = await Order.create({
       ticket: ticketId,
       buyerEmail,
       quantity,
       totalPrice,
-      status: "Pending",
+      status,
     });
 
     res.status(201).json({

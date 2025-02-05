@@ -18,12 +18,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please enter a password'],
     minlength: 7,
-    select: false,
+    select: false, // Ensure password isn't exposed by default
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
-    default: 'user',
+    enum: ['organizer'],
+    default: 'organizer',
   },
   purchases: [
     {
@@ -41,14 +41,16 @@ const userSchema = new mongoose.Schema({
   ],
 });
 
-userSchema.pre('save', async function(next) {
+// Hash password before saving
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-userSchema.methods.comparePasswordInDb = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+// Method to compare passwords
+userSchema.methods.comparePasswordInDb = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);

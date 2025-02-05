@@ -3,7 +3,12 @@ const Ticket = require("../Models/ticketModel");
 // Create Ticket
 exports.createTicket = async (req, res) => {
   try {
-    const { event, type, price, quantityAvailable, expiresAt } = req.body;
+    const { event, type, price = 0, quantityAvailable, expiresAt } = req.body;
+
+
+    if (price < 0) {
+      return res.status(400).json({ message: "Price cannot be negative" });
+    }
 
     const newTicket = await Ticket.create({
       event,

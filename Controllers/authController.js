@@ -12,12 +12,15 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: 'Passwords do not match' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists with that email' });
+    }
 
     const newUser = await User.create({
       name,
-      email,
-      password: hashedPassword,
+      email: email.toLowerCase(),
+      password, // Do NOT hash it here! Mongoose will handle it.
       role: 'organizer',
     });
 
@@ -28,20 +31,31 @@ exports.signup = async (req, res) => {
     res.status(201).json({
       status: 'success',
       token,
-      data: { user: newUser },
+      data: { user: { id: newUser._id, name: newUser.name, email: newUser.email } },
     });
   } catch (err) {
     res.status(500).json({ message: 'Something went wrong', error: err.message });
   }
 };
 
+
 // Organizer Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Incoming login request:', req.body);
 
-    const user = await User.findOne({ email }).select('+password');
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    console.log('User retrieved from DB:', user);
+
+    if (!user) {
+      return res.status(400).json({ message: 'Incorrect email or password' });
+    }
+
+    const isPasswordCorrect = await user.comparePasswordInDb(password);
+    console.log('Password match:', isPasswordCorrect);
+
+    if (!isPasswordCorrect) {
       return res.status(400).json({ message: 'Incorrect email or password' });
     }
 
@@ -49,7 +63,7 @@ exports.login = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRES || '1d',
     });
 
-    user.password = undefined;
+    user.password = undefined; // Hide password from response
 
     res.status(200).json({
       status: 'success',
@@ -63,6 +77,7 @@ exports.login = async (req, res) => {
       },
     });
   } catch (err) {
+    console.log('Error:', err);
     res.status(500).json({ message: 'Something went wrong', error: err.message });
   }
 };
