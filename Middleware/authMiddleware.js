@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../Models/userSignUp');
 
-// Middleware to authenticate the user
 const authMiddleware = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -12,14 +11,17 @@ const authMiddleware = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = await User.findById(decoded.id);
+    // Ensure you match the exact key used in the token payload
+    const userId = decoded.id || decoded._id; 
+
+    req.user = await User.findById(userId).select("-password"); // Exclude password for security
     if (!req.user) {
       return res.status(401).json({ message: 'User not found' });
     }
 
     next();
   } catch (err) {
-    res.status(401).json({ message: 'Unauthorized access' });
+    res.status(401).json({ message: 'Unauthorized access', error: err.message });
   }
 };
 

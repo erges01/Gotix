@@ -43,17 +43,17 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('Incoming login request:', req.body);
+    //console.log('Incoming login request:', req.body);
 
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    console.log('User retrieved from DB:', user);
+    //console.log('User retrieved from DB:', user);
 
     if (!user) {
       return res.status(400).json({ message: 'Incorrect email or password' });
     }
 
     const isPasswordCorrect = await user.comparePasswordInDb(password);
-    console.log('Password match:', isPasswordCorrect);
+    //console.log('Password match:', isPasswordCorrect);
 
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: 'Incorrect email or password' });

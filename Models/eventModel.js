@@ -1,5 +1,24 @@
 const mongoose = require("mongoose");
 
+const ticketTypeSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  quantityAvailable: {
+    type: Number,
+    required: true,
+  },
+  expiresAt: {
+    type: Date,
+    required: true,
+  },
+});
+
 const eventSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -22,6 +41,7 @@ const eventSchema = new mongoose.Schema({
     ref: "User", // Refers to the user who created the event
     required: true,
   },
+  ticketTypes: [ticketTypeSchema],  // Add ticket types as an array of subdocuments
   createdAt: {
     type: Date,
     default: Date.now,

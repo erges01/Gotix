@@ -37,6 +37,10 @@ const ticketSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  qrCodeUrl: {  // New field to store QR code URL
+    type: String,
+    required: true,
+  },
 });
 
 const Ticket = mongoose.model("Ticket", ticketSchema);

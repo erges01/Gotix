@@ -1,5 +1,5 @@
+const mongoose = require('mongoose');
 const Event = require("../Models/eventModel");
-
 // Create Event
 exports.createEvent = async (req, res) => {
   try {
@@ -36,15 +36,20 @@ exports.getAllEvents = async (req, res) => {
 exports.updateEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const updates = req.body;
 
+    // Validate if eventId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: 'Invalid event ID' });
+    }
+
+    const updates = req.body;
     const updatedEvent = await Event.findByIdAndUpdate(eventId, updates, {
       new: true,
       runValidators: true,
     });
 
     if (!updatedEvent) {
-      return res.status(404).json({ message: "Event not found" });
+      return res.status(404).json({ message: 'Event not found' });
     }
 
     res.status(200).json({ status: "success", data: { event: updatedEvent } });
