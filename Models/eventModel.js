@@ -38,10 +38,10 @@ const eventSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // Refers to the user who created the event
+    ref: "User",
     required: true,
   },
-  ticketTypes: [ticketTypeSchema],  // Add ticket types as an array of subdocuments
+  ticketTypes: [ticketTypeSchema],
   createdAt: {
     type: Date,
     default: Date.now,

@@ -9,19 +9,23 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: 'Authorization token required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Ensure you match the exact key used in the token payload
-    const userId = decoded.id || decoded._id; 
-
-    req.user = await User.findById(userId).select("-password"); // Exclude password for security
-    if (!req.user) {
-      return res.status(401).json({ message: 'User not found' });
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({ message: 'Invalid or expired token', error: error.message });
     }
 
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return res.status(401).json({ message: 'User no longer exists. Please log in again.' });
+    }
+
+    req.user = user;
     next();
   } catch (err) {
-    res.status(401).json({ message: 'Unauthorized access', error: err.message });
+    res.status(500).json({ message: 'Authentication failed', error: err.message });
   }
 };
 

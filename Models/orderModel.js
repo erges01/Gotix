@@ -1,9 +1,14 @@
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
-  ticket: {
+  eventId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Ticket", // Links order to a ticket
+    ref: "Event",
+    required: true,
+  },
+  ticketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Event.ticketTypes", // Reference ticket type inside Event model
     required: true,
   },
   buyerEmail: {
@@ -20,8 +25,14 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Pending", "Paid", "Cancelled"],
+    enum: ["Pending", "Paid", "Cancelled", "Confirmed"],
     default: "Pending",
+  },
+  qrCodeUrl: {
+    type: String,
+  },
+  ticketPdfUrl: {
+    type: String,
   },
   createdAt: {
     type: Date,
