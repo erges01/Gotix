@@ -1,16 +1,19 @@
 const mongoose = require('mongoose');
 const Event = require("../Models/eventModel");
-// Create Event
+
+// Create Event (Supports Multiple Dates, Time Slots, and Custom URLs)
 exports.createEvent = async (req, res) => {
   try {
-    const { name, description, date, location } = req.body;
+    const { name, description, dates, location, timeSlots, customURL } = req.body;
 
     const newEvent = await Event.create({
       name,
       description,
-      date,
+      dates,
       location,
+      timeSlots,
       createdBy: req.user._id, // The organizer (from authentication)
+      customURL,
     });
 
     res.status(201).json({
@@ -37,7 +40,6 @@ exports.updateEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
 
-    // Validate if eventId is a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(eventId)) {
       return res.status(400).json({ message: 'Invalid event ID' });
     }

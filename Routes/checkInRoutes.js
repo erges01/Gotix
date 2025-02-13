@@ -1,9 +1,9 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const checkInController = require('../Controllers/checkInController'); // Import the check-in controller
+const { checkInByQRCode, checkInByImage } = require("../Controllers/checkInController");
 
-// Routes for Check-In
-router.post('/qr-code', checkInController.checkInByQRCode); // Scan QR Code
-router.post('/image', checkInController.checkInByImage); // Manually Check-In by Ticket Image
+// ✅ Routes for Check-In
+router.post("/qr-code", checkInByQRCode); // Scan QR Code
+router.post("/image", checkInByImage); // Manually Check-In by Ticket ID
 
 module.exports = router;

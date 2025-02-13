@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 
-const ticketRoutes = require('./Routes/ticketRoutes');
 const authRoutes = require('./Routes/authRoutes');
 const orderRoutes = require('./Routes/orderRoutes');
 const eventRoutes = require('./Routes/eventRoutes');
@@ -12,7 +11,6 @@ const checkInRoutes = require('./Routes/checkInRoutes'); // Import check-in rout
 app.use(express.json());
 
 // Routes
-app.use('/api/tickets', ticketRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/order', orderRoutes);
 app.use('/api/events', eventRoutes); // Add event routes

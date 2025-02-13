@@ -19,13 +19,14 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  attendees: [{ email: String, qrCodeUrl: String }], // Store individual attendees for group tickets
   totalPrice: {
     type: Number,
     required: true,
   },
   status: {
     type: String,
-    enum: ["Pending", "Paid", "Cancelled", "Confirmed"],
+    enum: ["Pending", "Paid", "Cancelled", "Confirmed", "Approved"], // Added "Approved" for guest list management
     default: "Pending",
   },
   qrCodeUrl: {
