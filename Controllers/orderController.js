@@ -6,6 +6,17 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 const sendEmail = require("../Utils/mailer");
 
+// ✅ Ensure directories exist before saving QR codes and PDFs
+const ensureDirectoryExistence = (dir) => {
+  try {
+    fs.accessSync(dir, fs.constants.F_OK);
+    console.log(`Directory exists: ${dir}`);
+  } catch (error) {
+    console.log(`Creating directory: ${dir}`);
+    fs.mkdirSync(dir, { recursive: true });
+  }
+};
+
 // ✅ Create Order (Supports Group Ticketing & Password-Protected Tickets)
 exports.createOrder = async (req, res) => {
   try {
@@ -30,16 +41,36 @@ exports.createOrder = async (req, res) => {
     const totalPrice = ticket.price * quantity;
     const status = ticket.price === 0 ? "Confirmed" : "Pending";
 
+    // ✅ Ensure directories exist
+    const qrCodeDir = path.resolve(__dirname, "../public/qrCodes");
+    const ticketDir = path.resolve(__dirname, "../public/tickets");
+    ensureDirectoryExistence(qrCodeDir);
+    ensureDirectoryExistence(ticketDir);
+
     // Generate QR Codes & PDFs for each attendee
     const attendeeList = [];
     for (let i = 0; i < quantity; i++) {
       const qrCodeData = `order-${Date.now()}-${i}`;
-      const qrCodePath = path.join(__dirname, `../public/qrCodes/${qrCodeData}.png`);
+      const qrCodePath = path.join(qrCodeDir, `${qrCodeData}.png`);
+      const ticketPdfPath = path.join(ticketDir, `${qrCodeData}.pdf`);
+
+      // ✅ Generate QR Code
       await QRCode.toFile(qrCodePath, qrCodeData);
 
-      const ticketPdfPath = path.join(__dirname, `../public/tickets/${qrCodeData}.pdf`);
+      // ✅ Ensure QR Code exists before continuing
+      let attempts = 0;
+      while (!fs.existsSync(qrCodePath) && attempts < 10) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        attempts++;
+      }
+      if (!fs.existsSync(qrCodePath)) {
+        throw new Error(`QR Code generation failed: ${qrCodePath}`);
+      }
+
+      // ✅ Create PDF
       const doc = new PDFDocument();
-      doc.pipe(fs.createWriteStream(ticketPdfPath));
+      const pdfStream = fs.createWriteStream(ticketPdfPath);
+      doc.pipe(pdfStream);
       doc.fontSize(12).text(`Event: ${event.name}`, 100, 100);
       doc.text(`Ticket Type: ${ticketType}`, 100, 120);
       doc.text(`Attendee: ${attendees?.[i]?.email || buyerEmail}`, 100, 140);
@@ -47,10 +78,25 @@ exports.createOrder = async (req, res) => {
       doc.image(qrCodePath, 100, 200, { width: 150 });
       doc.end();
 
-      attendeeList.push({ email: attendees?.[i]?.email || buyerEmail, qrCodeUrl: `/public/qrCodes/${qrCodeData}.png` });
+      // ✅ Wait for PDF file to be fully written
+      await new Promise((resolve, reject) => {
+        pdfStream.on("finish", resolve);
+        pdfStream.on("error", reject);
+      });
+
+      // ✅ Confirm file exists before adding to list
+      if (!fs.existsSync(ticketPdfPath)) {
+        throw new Error(`Ticket PDF creation failed: ${ticketPdfPath}`);
+      }
+
+      attendeeList.push({
+        email: attendees?.[i]?.email || buyerEmail,
+        qrCodeUrl: `/public/qrCodes/${qrCodeData}.png`,
+        pdfPath: ticketPdfPath,
+      });
     }
 
-    // Create Order
+    // ✅ Create Order in Database
     const newOrder = await Order.create({
       ticketId: ticket._id,
       eventId,
@@ -65,14 +111,22 @@ exports.createOrder = async (req, res) => {
     ticket.quantityAvailable -= quantity;
     await event.save();
 
-    // Send Email
-    sendEmail(buyerEmail, `Your Ticket for ${event.name}`, "Here is your ticket.", attendeeList.map(att => ({ filename: `${att.qrCodeUrl}.pdf`, path: att.qrCodeUrl })));
+    // ✅ Send Email
+    const emailMessage = event.confirmationEmailMessage || "Thank you for your purchase! Here are your event details.";
+    const attachments = attendeeList.map((att) => ({
+      filename: path.basename(att.pdfPath),
+      path: att.pdfPath,
+    }));
+
+    sendEmail(buyerEmail, `Your Ticket for ${event.name}`, emailMessage, attachments);
 
     res.status(201).json({ status: "success", data: { order: newOrder } });
   } catch (err) {
+    console.error(`Order creation error: ${err.message}`);
     res.status(500).json({ message: "Failed to create order", error: err.message });
   }
 };
+
 
 // ✅ Approve Order (For Guest List Management)
 exports.approveOrder = async (req, res) => {
@@ -119,6 +173,23 @@ exports.validateTicket = async (req, res) => {
     res.status(200).json({ message: "Ticket validated successfully" });
   } catch (err) {
     res.status(500).json({ message: "Validation failed", error: err.message });
+  }
+};
+
+// ✅ Capture Checkout Question Responses
+exports.captureCheckoutResponses = async (req, res) => {
+  try {
+    const { orderId, checkoutResponses } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    order.checkoutResponses = checkoutResponses;
+    await order.save();
+
+    res.status(200).json({ message: "Checkout responses saved successfully", data: { order } });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to save checkout responses", error: err.message });
   }
 };
 
