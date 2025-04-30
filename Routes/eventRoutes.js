@@ -1,17 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const eventController = require("../Controllers/eventController");
-const { authMiddleware } = require("../Middleware/authMiddleware"); // Import auth middleware
+const { authMiddleware } = require("../Middleware/authMiddleware");
+const multer = require('multer');
+const upload = multer();
 
-// Routes for events
-router.post("/create", authMiddleware, eventController.createEvent); // Create an event
-router.get("/", eventController.getAllEvents); // Get all events
-router.get("/organizer", authMiddleware, eventController.getOrganizerEvents); // Get all events created by the logged-in organizer
-router.get("/:eventId", eventController.getEventById); // Get a single event by ID
-router.put("/:eventId", authMiddleware, eventController.updateEvent); // Update an event
-router.delete("/:eventId", authMiddleware, eventController.deleteEvent); // Delete an event
+// Correct - only one POST /create route
+router.post('/create', authMiddleware, upload.none(), eventController.createEvent);
+
+router.get("/", eventController.getAllEvents);
+router.get("/organizer", authMiddleware, eventController.getOrganizerEvents);
+router.get("/:eventId", eventController.getEventById);
+router.put("/:eventId", authMiddleware, eventController.updateEvent);
+router.delete("/:eventId", authMiddleware, eventController.deleteEvent);
 router.get("/:eventId/sales", authMiddleware, eventController.getEventSales);
 router.get("/:eventId/attendees/csv", authMiddleware, eventController.downloadAttendeeList);
-
+router.put("/:eventId/ticket/:ticketType/password", authMiddleware, eventController.updateTicketPassword);
+router.get("/:eventId/analytics", authMiddleware, eventController.getEventAnalytics);
+router.get("/organizer/analytics", authMiddleware, eventController.getOrganizerAnalytics);
 
 module.exports = router;

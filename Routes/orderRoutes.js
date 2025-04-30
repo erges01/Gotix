@@ -9,5 +9,7 @@ router.get("/", authMiddleware, orderController.getOrders); // Get all orders (P
 router.put("/approve/:orderId", authMiddleware, restrictTo("organizer"), orderController.approveOrder); // Approve an order for guest list management
 router.post("/validate-ticket", authMiddleware, restrictTo("organizer"), orderController.validateTicket); // Validate a ticket (Check-in)
 router.post("/refund/:orderId", authMiddleware, restrictTo("organizer"), orderController.refundOrder); // Process a refund
+router.get("/download/:orderId", orderController.downloadTicket);
+router.get("/:orderId", orderController.getOrderById); // Get order by ID
 
 module.exports = router;

@@ -11,18 +11,25 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.8.4",
     "bcryptjs": "^2.4.3",
+    "canvas-confetti": "^1.9.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.0",
+    "multer": "^1.4.5-lts.2",
     "nodemailer": "^6.10.0",
     "pdfkit": "^0.16.0",
     "qrcode": "^1.5.4",
     "validator": "^13.12.0"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "nodemon": "^3.1.7"
   }
 }

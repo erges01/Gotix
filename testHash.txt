@@ -1,0 +1,696 @@
+this is all i have done so farr ejeh Yes boss! Here's your **🔥 Gotix MVP Progress Recap** — **Backend & Frontend** — and the **next immediate task** so you're tracking like a sniper 🫡
+
+---
+
+### ✅ **Back-End (Complete & Working 💪)**
+
+#### 🎟️ **Event System**
+- Create, update, delete events ✅  
+- Multiple event dates ✅  
+- Time slots for 1-on-1 bookings ✅  
+- Custom URLs ✅  
+- Ticket types: Free, Paid, Group, Invite-only (with password) ✅  
+- Optional checkout questions ✅  
+- Custom confirmation email message ✅  
+
+#### 📦 **Order System**
+- Create order (ticket purchase) ✅  
+- Handles group ticketing ✅  
+- Invite-only password validation ✅  
+- Attendee QR code generation ✅  
+- Ticket PDF generation ✅  
+- Checkout responses captured ✅  
+- Ticket check-in via QR ✅  
+- Ticket refund ✅  
+- Ticket download API (PDF) ✅  
+
+---
+
+### ✅ **Frontend (Work-in-Progress 🚧)**
+
+#### 🎨 **Files & Components You've Created**
+- `src/app/events/[eventId]/checkout/page.tsx` ✅  
+- `src/app/orders/success/page.tsx` ✅  
+- `utils/api.ts` with axios config ✅  
+
+#### 🧠 **Working Logic So Far**
+- Checkout UI in progress ✅  
+- Order success UI with QR codes rendering ✅  
+- API integration with backend `createOrder` done ✅  
+- Ticket download ready on backend but frontend link not yet wired ❌  
+
+---
+
+### 📍 **What’s Next (High Priority)**
+| Task | Status | Needed Files |
+|------|--------|--------------|
+| ✅ Make success page QR work (attendee list rendering) | ✅ | done just now |
+| 🔥 Add "Download Ticket" button to success page | ⏳ | need `att.pdfPath` or order ID |
+| 🔥 Fix checkout form UI | ⏳ | `checkout/page.tsx` |
+| 🔥 Wire `createOrder` API to submit form | ⏳ | needs form handler |
+| ✅ Ticket password logic (invite-only) | ✅ | already works |
+| ✅ Confirm ticket creation without email | ✅ | tickets saved locally |
+| ✅ Ensure confirmation message appears | ✅ | success screen done |
+
+---
+
+### 🧠 **Strategic Notes**
+- ✅ Email sending is optional now, download replaces it
+- ✅ Organizer dashboard almost ready
+- 🔥 Make sure attendees can **buy ticket → see QR → download**
+
+---
+
+### ⏭️ What we do next (in order)
+
+1. ✅ **Fix the TS error** (done)
+2. 🔥 **Add Download Ticket** button to each QR ticket in success page
+3. 🔥 **Hook up the order form in checkout**
+4. ✅ Once complete → test full ticket purchase flow
+5. 🔥 Frontend dashboard (organizer event list, event stats)
+
+---
+
+Let’s push Gotix to MVP **this week** boss!  
+Send me the `checkout/page.tsx` next — that's the big missing piece!
+
+**a.** Want me to scaffold the `checkout/page.tsx` structure for you now?  
+**b.** Want ticket download button in the success page QR blocks?
+
+
+
+
+
+
+
+ceate event page 
+"use client";
+
+import { useState } from "react";
+import { api } from "@/utils/api";
+import { useRouter } from "next/navigation";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+export default function CreateEventPage() {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    location: "",
+    ticketType: "free",
+    price: 0,
+  });
+  const [image, setImage] = useState<File | null>(null);
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+
+  // Handle Form Change
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm((prevForm) => ({ ...prevForm, [name]: value }));
+  };
+
+  // Handle Image Upload
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setImage(e.target.files[0]);
+    }
+  };
+
+  // Form Validation
+  const validateForm = () => {
+    const { title, description, date, time, location } = form;
+    if (!title || !description || !date || !time || !location) {
+      return "All fields are required!";
+    }
+    if (form.ticketType === "paid" && form.price <= 0) {
+      return "Price must be greater than 0 for paid events.";
+    }
+    return null;
+  };
+
+  // Handle Form Submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      setLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("You must be logged in as an organizer.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("description", form.description);
+      formData.append("date", form.date);
+      formData.append("time", form.time);
+      formData.append("location", form.location);
+      formData.append("ticketType", form.ticketType);
+      if (form.ticketType === "paid") formData.append("price", String(form.price));
+      if (image) formData.append("image", image);
+
+      const response = await fetch("/api/events/create", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to create event");
+
+      toast.success("Event created successfully!");
+      router.push("/dashboard"); // Redirect to organizer dashboard
+    } catch (err) {
+      setError((err as Error).message);
+      toast.error(`Error: ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FAF9F6] text-[#6B6B6B] p-8">
+      <h1 className="text-4xl font-extrabold text-[#DDB892] mb-8">Create a New Event</h1>
+
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+        {/* Event Title */}
+        <div>
+          <label htmlFor="title" className="block mb-2">Event Title</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            placeholder="Enter event title"
+            value={form.title}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-[#DDB892] rounded-lg bg-[#FAF9F6] focus:ring-2 focus:ring-[#DDB892]"
+            required
+          />
+        </div>
+
+        {/* Description */}
+        <div>
+          <label htmlFor="description" className="block mb-2">Event Description</label>
+          <textarea
+            id="description"
+            name="description"
+            placeholder="Describe your event"
+            value={form.description}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-[#DDB892] rounded-lg bg-[#FAF9F6] focus:ring-2 focus:ring-[#DDB892]"
+            required
+          />
+        </div>
+
+        {/* Date and Time */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="date" className="block mb-2">Date</label>
+            <input
+              type="date"
+              id="date"
+              name="date"
+              value={form.date}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-[#DDB892] rounded-lg bg-[#FAF9F6]"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="time" className="block mb-2">Time</label>
+            <input
+              type="time"
+              id="time"
+              name="time"
+              value={form.time}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-[#DDB892] rounded-lg bg-[#FAF9F6]"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Location */}
+        <div>
+          <label htmlFor="location" className="block mb-2">Location</label>
+          <input
+            type="text"
+            id="location"
+            name="location"
+            placeholder="Event location"
+            value={form.location}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-[#DDB892] rounded-lg bg-[#FAF9F6]"
+            required
+          />
+        </div>
+
+        {/* Ticket Type */}
+        <div>
+          <label htmlFor="ticketType" className="block mb-2">Ticket Type</label>
+          <select
+            id="ticketType"
+            name="ticketType"
+            value={form.ticketType}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-[#DDB892] rounded-lg bg-[#FAF9F6]"
+          >
+            <option value="free">Free</option>
+            <option value="paid">Paid</option>
+            <option value="invite-only">Invite-Only</option>
+          </select>
+        </div>
+
+        {/* Price (Only if Paid) */}
+        {form.ticketType === "paid" && (
+          <div>
+            <label htmlFor="price" className="block mb-2">Ticket Price (USD)</label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              value={form.price}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-[#DDB892] rounded-lg bg-[#FAF9F6]"
+            />
+          </div>
+        )}
+
+        {/* Image Upload */}
+        <div>
+          <label className="block mb-2">Event Image (Optional)</label>
+          <input type="file" onChange={handleImageChange} accept="image/*" />
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-[#DDB892] py-3 rounded-lg text-[#1E1E1E] font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+          disabled={loading}
+        >
+          {loading && (
+            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+          )}
+          {loading ? 'Creating...' : 'Create Event'}
+        </button>
+      </form>
+
+      <ToastContainer />
+    </div>
+  );
+}
+event contolle 
+const mongoose = require('mongoose');
+const Event = require("../Models/eventModel");
+const { Parser } = require("json2csv"); // Library for CSV conversion
+
+// Create Event (Supports Multiple Dates, Time Slots, Custom URLs, Ticket Types, and Optional Checkout Questions)
+exports.createEvent = async (req, res) => {
+  try {
+    const { name, description, dates, location, timeSlots, customURL, ticketTypes, checkoutQuestions } = req.body;
+
+    // Validate ticket types
+    if (!Array.isArray(ticketTypes) || ticketTypes.length === 0) {
+      return res.status(400).json({ message: "At least one ticket type is required" });
+    }
+
+    ticketTypes.forEach((ticket) => {
+      if (!ticket.type || ticket.price < 0 || ticket.quantityAvailable < 0) {
+        throw new Error("Invalid ticket type format");
+      }
+    });
+
+    const newEvent = await Event.create({
+      name,
+      description,
+      dates,
+      location,
+      timeSlots,
+      createdBy: req.user._id, // The organizer (from authentication)
+      customURL,
+      ticketTypes,
+      checkoutQuestions: Array.isArray(checkoutQuestions) ? checkoutQuestions : [], // Make checkout questions optional
+    });
+
+    res.status(201).json({
+      status: "success",
+      data: { event: newEvent },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to create event", error: err.message });
+  }
+};
+
+// Get All Events by Organizer
+exports.getOrganizerEvents = async (req, res) => {
+  try {
+    const organizerId = req.user._id; // Get organizer ID from logged-in user
+    const events = await Event.find({ createdBy: organizerId });
+
+    res.status(200).json({ status: "success", data: { events } });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to retrieve organizer's events", error: err.message });
+  }
+};
+
+// Get All Events
+exports.getAllEvents = async (req, res) => {
+  try {
+    const events = await Event.find().populate("createdBy", "name email");
+    res.status(200).json({ status: "success", data: { events } });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to retrieve events", error: err.message });
+  }
+};
+
+// Get Single Event by ID
+exports.getEventById = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const event = await Event.findById(eventId).populate("createdBy", "name email");
+    
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    res.status(200).json({ status: "success", data: { event } });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to retrieve event", error: err.message });
+  }
+};
+
+// Get Sales & Revenue Per Event
+exports.getEventSales = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const orders = await Order.find({ eventId, status: "Paid" });
+
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+    const totalTicketsSold = orders.reduce((sum, order) => sum + order.quantity, 0);
+
+    res.status(200).json({
+      status: "success",
+      data: { totalRevenue, totalTicketsSold, orders },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to retrieve sales data", error: err.message });
+  }
+};
+
+// Update Event
+exports.updateEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: 'Invalid event ID' });
+    }
+
+    const updates = req.body;
+    const updatedEvent = await Event.findByIdAndUpdate(eventId, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedEvent) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    res.status(200).json({ status: "success", data: { event: updatedEvent } });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update event", error: err.message });
+  }
+};
+
+// Download Attendee List as CSV
+exports.downloadAttendeeList = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const orders = await Order.find({ eventId, status: "Paid" }).populate("attendees");
+
+    const attendees = orders.flatMap(order => order.attendees);
+
+    if (attendees.length === 0) {
+      return res.status(404).json({ message: "No attendees found for this event." });
+    }
+
+    const parser = new Parser({ fields: ["email", "qrCodeUrl"] });
+    const csv = parser.parse(attendees);
+
+    res.header("Content-Type", "text/csv");
+    res.attachment(`attendees-${eventId}.csv`);
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to generate CSV", error: err.message });
+  }
+};
+
+// Delete Event
+exports.deleteEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    await Event.findByIdAndDelete(eventId);
+    res.status(204).json({ status: "success", data: null });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete event", error: err.message });
+  }
+};
+
+// Add or Update Checkout Questions for an Event (Optional)
+exports.setCheckoutQuestions = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { checkoutQuestions } = req.body;
+
+    // Ensure checkout questions are optional
+    if (!Array.isArray(checkoutQuestions)) {
+      return res.status(400).json({ message: "Checkout questions should be an array or omitted." });
+    }
+
+    // Validate event ownership
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    if (event.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "You are not authorized to modify this event" });
+    }
+
+    event.checkoutQuestions = checkoutQuestions;
+    await event.save();
+
+    res.status(200).json({ status: "success", data: { event } });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update checkout questions", error: err.message });
+  }
+};
+
+// ✅ Update Invite-Only Ticket Password
+exports.updateTicketPassword = async (req, res) => {
+  try {
+    const { eventId, ticketType } = req.params;
+    const { newPassword } = req.body;
+
+    // Find event
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    // Ensure only the event creator can modify tickets
+    if (event.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "You are not authorized to modify this event" });
+    }
+
+    // Find the specific ticket type
+    const ticket = event.ticketTypes.find((t) => t.type === ticketType);
+    if (!ticket) return res.status(400).json({ message: "Ticket type not found" });
+
+    // ✅ Update ticket password
+    ticket.password = newPassword || null; // Remove password if empty
+    await event.save();
+
+    res.status(200).json({ status: "success", message: "Ticket password updated successfully", data: { event } });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update ticket password", error: err.message });
+  }
+};
+
+// ✅ Get Event Analytics (Revenue, Ticket Sales Breakdown, Attendee Trends)
+exports.getEventAnalytics = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // Find event
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    // Fetch all paid orders for this event
+    const orders = await Order.find({ eventId, status: "Paid" });
+
+    // Calculate total revenue
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+
+    // Count total tickets sold
+    const totalTicketsSold = orders.reduce((sum, order) => sum + order.quantity, 0);
+
+    // Break down sales by ticket type
+    const ticketSales = {};
+    event.ticketTypes.forEach(ticket => {
+      ticketSales[ticket.type] = { totalSold: 0, revenue: 0 };
+    });
+
+    orders.forEach(order => {
+      const ticketType = event.ticketTypes.find(ticket => ticket._id.equals(order.ticketId));
+      if (ticketType) {
+        ticketSales[ticketType.type].totalSold += order.quantity;
+        ticketSales[ticketType.type].revenue += order.totalPrice;
+      }
+    });
+
+    // Group sales data by date (Attendee Trends)
+    const salesTrends = {};
+    orders.forEach(order => {
+      const orderDate = order.createdAt.toISOString().split("T")[0]; // YYYY-MM-DD format
+      if (!salesTrends[orderDate]) salesTrends[orderDate] = { ticketsSold: 0, revenue: 0 };
+      salesTrends[orderDate].ticketsSold += order.quantity;
+      salesTrends[orderDate].revenue += order.totalPrice;
+    });
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        totalRevenue,
+        totalTicketsSold,
+        ticketSales,
+        salesTrends,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to retrieve event analytics", error: err.message });
+  }
+};
+
+// ✅ Get Organizer Analytics (Total Revenue, Best-Selling Events, Trends)
+exports.getOrganizerAnalytics = async (req, res) => {
+  try {
+    const organizerId = req.user._id; // Get organizer's ID
+
+    // Find all events created by the organizer
+    const events = await Event.find({ createdBy: organizerId });
+
+    if (events.length === 0) {
+      return res.status(404).json({ message: "No events found for this organizer" });
+    }
+
+    // Fetch all paid orders for the organizer's events
+    const eventIds = events.map(event => event._id);
+    const orders = await Order.find({ eventId: { $in: eventIds }, status: "Paid" });
+
+    // Calculate total revenue across all events
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+
+    // Count total tickets sold
+    const totalTicketsSold = orders.reduce((sum, order) => sum + order.quantity, 0);
+
+    // Identify the best-selling event
+    const eventSales = {};
+    events.forEach(event => {
+      eventSales[event._id] = { name: event.name, revenue: 0, ticketsSold: 0 };
+    });
+
+    orders.forEach(order => {
+      if (eventSales[order.eventId]) {
+        eventSales[order.eventId].revenue += order.totalPrice;
+        eventSales[order.eventId].ticketsSold += order.quantity;
+      }
+    });
+
+    // Sort events by revenue (best-selling event first)
+    const sortedEvents = Object.values(eventSales).sort((a, b) => b.revenue - a.revenue);
+
+    // Group sales data by date (Attendee Trends)
+    const salesTrends = {};
+    orders.forEach(order => {
+      const orderDate = order.createdAt.toISOString().split("T")[0]; // YYYY-MM-DD format
+      if (!salesTrends[orderDate]) salesTrends[orderDate] = { ticketsSold: 0, revenue: 0 };
+      salesTrends[orderDate].ticketsSold += order.quantity;
+      salesTrends[orderDate].revenue += order.totalPrice;
+    });
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        totalRevenue,
+        totalTicketsSold,
+        bestSellingEvents: sortedEvents.slice(0, 5), // Top 5 best-selling events
+        salesTrends,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to retrieve organizer analytics", error: err.message });
+  }
+};
+event model
+const mongoose = require("mongoose");
+
+const ticketTypeSchema = new mongoose.Schema({
+  type: { type: String, required: true },
+  price: { type: Number, required: true },
+  quantityAvailable: { type: Number, required: true },
+  expiresAt: { type: Date, required: true },
+  password: { type: String, default: null } // ✅ Invite-only ticket password (optional)
+});
+
+const eventSchema = new mongoose.Schema({
+  name: { type: String, required: [true, "Event name is required"] },
+  description: { type: String, required: [true, "Event description is required"] },
+  recurring: { type: Boolean, default: false }, // ✅ Marks event as recurring
+  dates: [{ type: Date, required: true }], // ✅ Supports multiple dates
+  timeSlots: [{ type: String }], // ✅ Time slots for one-on-one events
+  location: { type: String, required: [true, "Event location is required"] },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  ticketTypes: [ticketTypeSchema],
+  customURL: { type: String, unique: true }, // ✅ Custom event URLs
+  checkoutQuestions: [{ question: { type: String, required: false } }], // ✅ Checkout questions (optional)
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Event = mongoose.model("Event", eventSchema);
+module.exports = Event;
+event routes
+const express = require("express");
+const router = express.Router();
+const eventController = require("../Controllers/eventController");
+const { authMiddleware } = require("../Middleware/authMiddleware"); // Import auth middleware
+
+// Routes for events
+router.post("/create", authMiddleware, eventController.createEvent); // Create an event
+router.get("/", eventController.getAllEvents); // Get all events
+router.get("/organizer", authMiddleware, eventController.getOrganizerEvents); // Get all events created by the logged-in organizer
+router.get("/:eventId", eventController.getEventById); // Get a single event by ID
+router.put("/:eventId", authMiddleware, eventController.updateEvent); // Update an event
+router.delete("/:eventId", authMiddleware, eventController.deleteEvent); // Delete an event
+router.get("/:eventId/sales", authMiddleware, eventController.getEventSales);
+router.get("/:eventId/attendees/csv", authMiddleware, eventController.downloadAttendeeList);
+router.put("/:eventId/ticket/:ticketType/password", authMiddleware, eventController.updateTicketPassword);
+router.get("/:eventId/analytics", authMiddleware, eventController.getEventAnalytics);
+router.get("/organizer/analytics", authMiddleware, eventController.getOrganizerAnalytics);
+
+
+module.exports = router;
+ 

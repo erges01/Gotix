@@ -9,14 +9,20 @@ exports.checkInByQRCode = async (req, res) => {
       return res.status(400).json({ message: "QR Code URL is required" });
     }
 
-    const order = await Order.findOne({ qrCodeUrl });
+    // ✅ Search for an order containing the QR Code in its attendees list
+    const order = await Order.findOne({ "attendees.qrCodeUrl": qrCodeUrl });
     if (!order) return res.status(404).json({ message: "Invalid QR Code" });
 
-    if (order.status === "Checked In") {
+    // ✅ Find the specific attendee & check if they are already checked in
+    const attendee = order.attendees.find(att => att.qrCodeUrl === qrCodeUrl);
+    if (!attendee) return res.status(404).json({ message: "Attendee not found" });
+
+    if (attendee.checkedIn) {
       return res.status(400).json({ message: "Ticket already checked in" });
     }
 
-    order.status = "Checked In";
+    // ✅ Mark the attendee as checked in
+    attendee.checkedIn = true;
     await order.save();
 
     res.status(200).json({ message: "Checked in successfully", order });
